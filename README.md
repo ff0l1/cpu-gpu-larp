@@ -1,4 +1,4 @@
-# larp
+# CPU-GPU-Larp
 
 One app to change the **GPU** and **CPU** names Windows shows in Task Manager.
 
@@ -12,11 +12,11 @@ Needs [CMake](https://cmake.org/) and Visual Studio with C++. Place the [ur](htt
 build.bat
 ```
 
-Run `build\Release\larp.exe` as Administrator.
+Run `build\Release\CPU-GPU-Larp.exe` as Administrator.
 
 ## Use
 
-Open **larp.exe** — it relaunches elevated if needed.
+Open **CPU-GPU-Larp.exe** — it relaunches elevated if needed.
 
 ### GPU tab
 
@@ -45,7 +45,7 @@ Windows stores each display adapter under:
 
 `HKLM\SYSTEM\CurrentControlSet\Enum\<instance-id>`
 
-larp writes a `FriendlyName` string value on that key, then sends a PnP property change so the new name is picked up without a reboot.
+CPU-GPU-Larp writes a `FriendlyName` string value on that key, then sends a PnP property change so the new name is picked up without a reboot.
 
 | File | Role |
 |------|------|
@@ -61,7 +61,7 @@ CPUs need two registry locations:
 1. **Enum FriendlyName** — one key per logical core (`\0`, `\1`, …) under `HKLM\SYSTEM\CurrentControlSet\Enum\ACPI\...`
 2. **CentralProcessor** — `ProcessorNameString` under `HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\{n}` — this is what Task Manager reads
 
-larp writes both in one click and groups logical cores by physical package.
+CPU-GPU-Larp writes both in one click and groups logical cores by physical package.
 
 | File | Role |
 |------|------|
@@ -77,4 +77,4 @@ larp writes both in one click and groups logical cores by physical package.
 
 ## Links
 
-ff0l — https://github.com/ff0l/larp
+ff0l — https://github.com/ff0l/CPU-GPU-Larp

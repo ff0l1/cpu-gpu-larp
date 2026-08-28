@@ -406,7 +406,7 @@ void DrawUi() {
     const float height = static_cast<float>(ur::app::height());
 
     if (ur::ui::window panel("##host", &g_open, FramePin | FrameClose, CVector(0.0f, 0.0f), CVector(width, height)); panel) {
-        Widgets->Heading("larp");
+        Widgets->Heading("CPU-GPU-Larp");
         ur::ui::faint("Spoof GPU and CPU names shown in Task Manager.");
 
         Layout->Skip(8.0f);
@@ -430,7 +430,7 @@ void DrawUi() {
         }
 
         Layout->Skip(10.0f);
-        ur::ui::faint("github.com/ff0l/larp");
+        ur::ui::faint("github.com/ff0l/CPU-GPU-Larp");
     }
 
     if (!g_open) {
@@ -457,7 +457,7 @@ bool IsRunningAsAdmin() {
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     if (!IsRunningAsAdmin()) {
-        MessageBoxW(nullptr, L"larp needs Administrator to change device names.", L"larp", MB_ICONWARNING | MB_OK);
+        MessageBoxW(nullptr, L"CPU-GPU-Larp needs Administrator to change device names.", L"CPU-GPU-Larp", MB_ICONWARNING | MB_OK);
         wchar_t path[MAX_PATH]{};
         GetModuleFileNameW(nullptr, path, MAX_PATH);
         ShellExecuteW(nullptr, L"runas", path, nullptr, nullptr, SW_SHOWNORMAL);
@@ -465,7 +465,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     }
 
     ur::app::Config config;
-    config.title = "larp";
+    config.title = "CPU-GPU-Larp";
     config.width = 560;
     config.height = 640;
     config.backend = ur::Backend::Auto;

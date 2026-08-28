@@ -13,5 +13,5 @@ where cmake >nul 2>&1 || set "CMAKE=%ProgramFiles%\Microsoft Visual Studio\18\Co
 "%CMAKE%" --build build --config Release || exit /b 1
 
 echo.
-echo Built: build\Release\larp.exe
+echo Built: build\Release\CPU-GPU-Larp.exe
 echo Run as Administrator.
