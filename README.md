@@ -14,6 +14,8 @@ build.bat
 
 Run `build\Release\CPU-GPU-Larp.exe` as Administrator.
 
+Floating glass panel over a **Plasma** background. GPU and CPU tabs, scrollable preset lists with search, plus **Fun** presets on both tabs.
+
 ## Use
 
 Open **CPU-GPU-Larp.exe** — it relaunches elevated if needed.
