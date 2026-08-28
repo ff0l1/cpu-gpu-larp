@@ -171,18 +171,7 @@ void ApplyBorderlessOverlay() {
     DwmExtendFrameIntoClientArea(hwnd, &margins);
 }
 
-void HandlePanelDrag(const CRectangle& panel) {
-    HWND hwnd = static_cast<HWND>(ur::app::window());
-    if (!hwnd) {
-        return;
-    }
-
-    const CRectangle drag(panel.Left, panel.Top, panel.Width, 36.0f * Style->Scale);
-    if (Input->MousePressed(0) && drag.Contains(Input->MousePosition) && Context->ActiveItem == 0) {
-        ReleaseCapture();
-        SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
-    }
-}
+void DrawBackground() {
     const float width = static_cast<float>(ur::app::width());
     const float height = static_cast<float>(ur::app::height());
     ur::effects::draw_atmosphere(width, height);
@@ -205,6 +194,19 @@ void DrawGlassPanel(const CRectangle& panel) {
     }
     if (Style->Borders) {
         Canvas->Border(panel, Style->Outline.Fade(0.65f), Style->Rounding, Style->Thickness);
+    }
+}
+
+void HandlePanelDrag(const CRectangle& panel) {
+    HWND hwnd = static_cast<HWND>(ur::app::window());
+    if (!hwnd) {
+        return;
+    }
+
+    const CRectangle drag(panel.Left, panel.Top, panel.Width, 36.0f * Style->Scale);
+    if (Input->MousePressed(0) && drag.Contains(Input->MousePosition) && Context->ActiveItem == 0) {
+        ReleaseCapture();
+        SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
     }
 }
 
