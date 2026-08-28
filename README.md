@@ -1,39 +1,56 @@
 # CPU-GPU-Larp
 
-One app to change the **GPU** and **CPU** names Windows shows in Task Manager.
+Change the **GPU** and **CPU** names shown in Windows Task Manager.
 
-Pick a preset, search the list, or type your own. Run as Administrator. Restart Task Manager after applying.
+Pick a preset, search the list, or type your own name. The app relaunches as Administrator when needed. Restart Task Manager after applying.
+
+<p align="center">
+  <img src="https://img.shields.io/badge/platform-Windows-0078d4?style=flat-square" alt="Windows">
+  <img src="https://img.shields.io/badge/C%2B%2B-20-00599c?style=flat-square" alt="C++20">
+</p>
+
+## Features
+
+- **GPU** and **CPU** in one app
+- Borderless overlay UI with preset search
+- NVIDIA, AMD, Intel Arc, and fun presets
+- **Apply** / **Restore** / **Refresh**
+- Multi-GPU adapter picker
+
+## Requirements
+
+- Windows 10 or 11
+- Administrator rights (registry changes)
+- [CMake](https://cmake.org/) 3.20+
+- Visual Studio 2022+ with C++ desktop development
+- [ur UI framework](https://github.com/ff0l/ui-framework) — place it next to this repo as `ui Framework`, or set `UR_FRAMEWORK_DIR`
 
 ## Build
 
-Needs [CMake](https://cmake.org/) and Visual Studio with C++. Place the [ur](https://github.com/ff0l/ui-framework) UI library next to this folder as `ui Framework`, or set `UR_FRAMEWORK_DIR`.
-
-```
+```bat
 build.bat
 ```
 
-Run `build\Release\CPU-GPU-Larp.exe` as Administrator.
+Output: `build\Release\CPU-GPU-Larp.exe`
 
-Floating glass panel over a **Plasma** background. GPU and CPU tabs, scrollable preset lists with search, plus **Fun** presets on both tabs.
+Run the executable as Administrator.
 
-## Use
+## Usage
 
-Open **CPU-GPU-Larp.exe** — it relaunches elevated if needed.
+### GPU
 
-### GPU tab
-
-1. If you have more than one physical GPU, pick the adapter.
-2. Open a preset group or search (e.g. `4090`, `7900`).
-3. Set the custom name if you want something not in the list.
+1. Open the **GPU** tab.
+2. If multiple adapters are listed, pick the one you want.
+3. Search or scroll presets, or edit **Custom name**.
 4. Click **Apply**.
 5. Restart Task Manager.
 
-**Restore** removes the custom `FriendlyName` and brings back the driver default.
+**Restore** removes the custom name and returns the driver default.
 
-### CPU tab
+### CPU
 
-1. Open a preset group or search (e.g. `9950X`, `Ultra 7`).
-2. Set the custom name if needed.
+1. Open the **CPU** tab.
+2. Pick a preset or set a custom name.
 3. Click **Apply** — all logical cores are updated together.
 4. Restart Task Manager.
 
@@ -43,40 +60,53 @@ Open **CPU-GPU-Larp.exe** — it relaunches elevated if needed.
 
 ### GPU
 
-Windows stores each display adapter under:
+Task Manager reads the display adapter **FriendlyName** under:
 
 `HKLM\SYSTEM\CurrentControlSet\Enum\<instance-id>`
 
-CPU-GPU-Larp writes a `FriendlyName` string value on that key, then sends a PnP property change so the new name is picked up without a reboot.
+The app writes that value and triggers a PnP property change so the new name shows up without a reboot. Virtual adapters (Basic Display, Remote Desktop, etc.) are ignored.
 
-| File | Role |
-|------|------|
-| `src/gpu_manager.cpp` | Enumerates GPUs via SetupAPI, writes `FriendlyName`, refreshes the device |
-| `src/gpu_presets.hpp` | NVIDIA / AMD / Intel preset names |
-
-Virtual adapters (`ROOT\DISPLAY`, Microsoft Basic Display, etc.) are ignored.
+| File | Purpose |
+|------|---------|
+| `src/gpu_manager.cpp` | GPU enumeration, registry writes, device refresh |
+| `src/gpu_presets.hpp` | Preset names |
 
 ### CPU
 
-CPUs need two registry locations:
+Task Manager reads **ProcessorNameString** under:
 
-1. **Enum FriendlyName** — one key per logical core (`\0`, `\1`, …) under `HKLM\SYSTEM\CurrentControlSet\Enum\ACPI\...`
-2. **CentralProcessor** — `ProcessorNameString` under `HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\{n}` — this is what Task Manager reads
+`HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\{n}`
 
-CPU-GPU-Larp writes both in one click and groups logical cores by physical package.
+The app also writes **FriendlyName** on each logical core under `Enum\ACPI\...` so everything stays in sync.
 
-| File | Role |
-|------|------|
-| `src/cpu_manager.cpp` | Enumerates processors, writes all cores + CentralProcessor keys |
-| `src/cpu_presets.hpp` | Intel / AMD preset names |
+| File | Purpose |
+|------|---------|
+| `src/cpu_manager.cpp` | CPU enumeration, registry writes, refresh |
+| `src/cpu_presets.hpp` | Preset names |
 
 ### UI
 
-| File | Role |
-|------|------|
-| `src/main.cpp` | Single window with **GPU** and **CPU** tabs (`ur` framework) |
-| `src/app.manifest` | Requires administrator |
+| File | Purpose |
+|------|---------|
+| `src/main.cpp` | Overlay window, tabs, preset lists |
+| `src/app.manifest` | Administrator elevation |
 
-## Links
+## Project layout
 
-ff0l — https://github.com/ff0l/CPU-GPU-Larp
+```
+CPU-GPU-Larp/
+├── src/
+│   ├── main.cpp
+│   ├── gpu_manager.cpp / .hpp
+│   ├── cpu_manager.cpp / .hpp
+│   ├── gpu_presets.hpp
+│   ├── cpu_presets.hpp
+│   └── app.manifest
+├── CMakeLists.txt
+├── build.bat
+└── README.md
+```
+
+## Author
+
+[ff0l](https://github.com/ff0l)

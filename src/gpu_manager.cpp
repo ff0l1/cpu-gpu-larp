@@ -39,14 +39,6 @@ std::wstring GetDevicePropertyString(HDEVINFO devInfo, PSP_DEVINFO_DATA devInfoD
     return reinterpret_cast<const wchar_t*>(buffer.data());
 }
 
-std::wstring StripInfReference(const std::wstring& value) {
-    const auto semi = value.find(L';');
-    if (semi != std::wstring::npos && value.starts_with(L'@')) {
-        return value.substr(semi + 1);
-    }
-    return value;
-}
-
 std::wstring TrimCopy(std::wstring value) {
     auto notSpace = [](wchar_t ch) { return !iswspace(ch); };
     value.erase(value.begin(), std::find_if(value.begin(), value.end(), notSpace));
@@ -54,12 +46,36 @@ std::wstring TrimCopy(std::wstring value) {
     return value;
 }
 
+std::wstring StripInfReference(const std::wstring& value) {
+    std::wstring trimmed = TrimCopy(value);
+    if (trimmed.empty()) {
+        return trimmed;
+    }
+
+    while (!trimmed.empty() && (trimmed.front() == L'\uFEFF' || trimmed.front() == L'\uFFFD')) {
+        trimmed.erase(trimmed.begin());
+    }
+
+    if (trimmed.starts_with(L'@') || trimmed.starts_with(L'%')) {
+        const auto semi = trimmed.rfind(L';');
+        if (semi != std::wstring::npos && semi + 1 < trimmed.size()) {
+            trimmed = TrimCopy(trimmed.substr(semi + 1));
+        }
+    }
+
+    while (!trimmed.empty() && (trimmed.front() == L'\uFEFF' || trimmed.front() == L'\uFFFD')) {
+        trimmed.erase(trimmed.begin());
+    }
+
+    return TrimCopy(trimmed);
+}
+
 std::wstring LowerCopy(std::wstring s) {
     std::transform(s.begin(), s.end(), s.begin(), ::towlower);
     return s;
 }
 
-} // namespace
+}
 
 std::wstring GpuManager::ReadRegistryString(HKEY key, const wchar_t* valueName) {
     DWORD type = 0;
@@ -219,7 +235,8 @@ std::vector<GpuDevice> GpuManager::EnumerateGpus() {
 }
 
 bool GpuManager::SetFriendlyName(const GpuDevice& gpu, const std::wstring& name) {
-    if (name.empty()) {
+    const std::wstring sanitized = StripInfReference(name);
+    if (sanitized.empty()) {
         return false;
     }
 
@@ -242,8 +259,8 @@ bool GpuManager::SetFriendlyName(const GpuDevice& gpu, const std::wstring& name)
         L"FriendlyName",
         0,
         REG_SZ,
-        reinterpret_cast<const BYTE*>(name.c_str()),
-        static_cast<DWORD>((name.size() + 1) * sizeof(wchar_t)));
+        reinterpret_cast<const BYTE*>(sanitized.c_str()),
+        static_cast<DWORD>((sanitized.size() + 1) * sizeof(wchar_t)));
 
     RegCloseKey(key);
 

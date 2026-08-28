@@ -41,14 +41,6 @@ std::wstring GetDevicePropertyString(HDEVINFO devInfo, PSP_DEVINFO_DATA devInfoD
     return reinterpret_cast<const wchar_t*>(buffer.data());
 }
 
-std::wstring StripInfReference(const std::wstring& value) {
-    const auto semi = value.find(L';');
-    if (semi != std::wstring::npos && value.starts_with(L'@')) {
-        return value.substr(semi + 1);
-    }
-    return value;
-}
-
 std::wstring TrimCopy(std::wstring value) {
     auto notSpace = [](wchar_t ch) { return !iswspace(ch); };
     value.erase(value.begin(), std::find_if(value.begin(), value.end(), notSpace));
@@ -56,7 +48,31 @@ std::wstring TrimCopy(std::wstring value) {
     return value;
 }
 
-} // namespace
+std::wstring StripInfReference(const std::wstring& value) {
+    std::wstring trimmed = TrimCopy(value);
+    if (trimmed.empty()) {
+        return trimmed;
+    }
+
+    while (!trimmed.empty() && (trimmed.front() == L'\uFEFF' || trimmed.front() == L'\uFFFD')) {
+        trimmed.erase(trimmed.begin());
+    }
+
+    if (trimmed.starts_with(L'@') || trimmed.starts_with(L'%')) {
+        const auto semi = trimmed.rfind(L';');
+        if (semi != std::wstring::npos && semi + 1 < trimmed.size()) {
+            trimmed = TrimCopy(trimmed.substr(semi + 1));
+        }
+    }
+
+    while (!trimmed.empty() && (trimmed.front() == L'\uFEFF' || trimmed.front() == L'\uFFFD')) {
+        trimmed.erase(trimmed.begin());
+    }
+
+    return TrimCopy(trimmed);
+}
+
+}
 
 std::wstring CpuManager::ReadRegistryString(HKEY key, const wchar_t* valueName) {
     DWORD type = 0;
@@ -132,13 +148,14 @@ std::wstring CpuManager::ReadSystemProcessorName() {
         return {};
     }
 
-    const std::wstring value = ReadRegistryString(key, L"ProcessorNameString");
+    const std::wstring value = StripInfReference(ReadRegistryString(key, L"ProcessorNameString"));
     RegCloseKey(key);
     return value;
 }
 
 bool CpuManager::WriteSystemProcessorName(const std::wstring& name, int logicalCores) {
-    if (name.empty() || logicalCores <= 0) {
+    const std::wstring sanitized = StripInfReference(name);
+    if (sanitized.empty() || logicalCores <= 0) {
         return false;
     }
 
@@ -155,8 +172,8 @@ bool CpuManager::WriteSystemProcessorName(const std::wstring& name, int logicalC
             L"ProcessorNameString",
             0,
             REG_SZ,
-            reinterpret_cast<const BYTE*>(name.c_str()),
-            static_cast<DWORD>((name.size() + 1) * sizeof(wchar_t)));
+            reinterpret_cast<const BYTE*>(sanitized.c_str()),
+            static_cast<DWORD>((sanitized.size() + 1) * sizeof(wchar_t)));
         RegCloseKey(key);
         any = status == ERROR_SUCCESS || any;
     }
@@ -280,24 +297,25 @@ bool CpuManager::RefreshPackage(const CpuDevice& cpu) {
 }
 
 bool CpuManager::SetFriendlyName(const CpuDevice& cpu, const std::wstring& name) {
-    if (name.empty() || cpu.registryPaths.empty()) {
+    const std::wstring sanitized = StripInfReference(name);
+    if (sanitized.empty() || cpu.registryPaths.empty()) {
         return false;
     }
 
     if (g_baselineSystemNames.find(cpu.packageKey) == g_baselineSystemNames.end()) {
         const std::wstring current = ReadSystemProcessorName();
-        if (!current.empty() && _wcsicmp(current.c_str(), name.c_str()) != 0) {
+        if (!current.empty() && _wcsicmp(current.c_str(), sanitized.c_str()) != 0) {
             g_baselineSystemNames[cpu.packageKey] = current;
         }
     }
 
     bool any = false;
     for (const auto& path : cpu.registryPaths) {
-        any = WriteFriendlyNameAtPath(path, name) || any;
+        any = WriteFriendlyNameAtPath(path, sanitized) || any;
     }
 
     if (any) {
-        WriteSystemProcessorName(name, cpu.logicalCores);
+        WriteSystemProcessorName(sanitized, cpu.logicalCores);
         RefreshPackage(cpu);
     }
     return any;
