@@ -92,6 +92,8 @@ inline const std::vector<CpuPresetGroup>& GetCpuPresets() {
                 L"Intel(R) Core(TM) i9-99900KS",
                 L"AMD Ryzen 9 9950X3D 32-Core Processor",
                 L"Potato CPU 1-Core Processor",
+                L"Intel(R) Celeron(R) D 360",
+                L"AMD Athlon(tm) XP 3200+",
             },
         },
     };

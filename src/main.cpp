@@ -17,6 +17,8 @@
 
 namespace {
 
+constexpr float kPanelPad = 18.0f;
+
 enum class Page {
     Gpu,
     Cpu,
@@ -60,9 +62,8 @@ char g_gpuSearch[128]{};
 bool g_hasLeftover = false;
 std::vector<std::string> g_gpuPresetNames;
 std::vector<const char*> g_gpuPresetPtrs;
-std::vector<std::string> g_gpuLabels;
-std::vector<const char*> g_gpuLabelPtrs;
-std::vector<bool> g_gpuGroupOpen;
+std::vector<std::string> g_gpuAdapterLabels;
+std::vector<const char*> g_gpuAdapterPtrs;
 
 std::vector<CpuDevice> g_cpus;
 int g_selectedCpu = 0;
@@ -71,7 +72,6 @@ int g_cpuPresetSelected = -1;
 char g_cpuSearch[128]{};
 std::vector<std::string> g_cpuPresetNames;
 std::vector<const char*> g_cpuPresetPtrs;
-std::vector<bool> g_cpuGroupOpen;
 
 void BuildFlatPresets(
     const auto& groups,
@@ -97,12 +97,12 @@ void SyncPresetSelection(const std::string& customName, std::vector<std::string>
     }
 }
 
-void UpdateGpuLabels() {
-    g_gpuLabels.clear();
-    g_gpuLabelPtrs.clear();
+void UpdateGpuAdapterLabels() {
+    g_gpuAdapterLabels.clear();
+    g_gpuAdapterPtrs.clear();
     for (size_t i = 0; i < g_gpus.size(); ++i) {
-        g_gpuLabels.push_back("GPU " + std::to_string(i + 1) + " — " + WideToUtf8(g_gpus[i].currentName));
-        g_gpuLabelPtrs.push_back(g_gpuLabels.back().c_str());
+        g_gpuAdapterLabels.push_back("GPU " + std::to_string(i + 1) + " — " + WideToUtf8(g_gpus[i].currentName));
+        g_gpuAdapterPtrs.push_back(g_gpuAdapterLabels.back().c_str());
     }
 }
 
@@ -116,7 +116,7 @@ void RefreshGpus() {
         return;
     }
     g_selectedGpu = (std::min)(g_selectedGpu, static_cast<int>(g_gpus.size()) - 1);
-    UpdateGpuLabels();
+    UpdateGpuAdapterLabels();
     g_gpuCustomName = WideToUtf8(g_gpus[g_selectedGpu].currentName);
     SyncPresetSelection(g_gpuCustomName, g_gpuPresetNames, g_gpuPresetSelected);
 }
@@ -134,15 +134,6 @@ void RefreshCpus() {
     SyncPresetSelection(g_cpuCustomName, g_cpuPresetNames, g_cpuPresetSelected);
 }
 
-void SelectGpu(int index) {
-    if (index < 0 || index >= static_cast<int>(g_gpus.size())) {
-        return;
-    }
-    g_selectedGpu = index;
-    g_gpuCustomName = WideToUtf8(g_gpus[g_selectedGpu].currentName);
-    SyncPresetSelection(g_gpuCustomName, g_gpuPresetNames, g_gpuPresetSelected);
-}
-
 void OnGpuApply() {
     if (g_gpus.empty()) {
         return;
@@ -157,7 +148,7 @@ void OnGpuApply() {
         return;
     }
     RefreshGpus();
-    ur::ui::notice("GPU name applied. Restart Task Manager.");
+    ur::ui::notice("GPU applied — restart Task Manager.");
 }
 
 void OnGpuRestore() {
@@ -169,7 +160,7 @@ void OnGpuRestore() {
         return;
     }
     RefreshGpus();
-    ur::ui::notice("GPU name restored.");
+    ur::ui::notice("GPU restored.");
 }
 
 void OnGpuCleanupLeftover() {
@@ -195,7 +186,7 @@ void OnCpuApply() {
         return;
     }
     RefreshCpus();
-    ur::ui::notice("CPU name applied. Restart Task Manager.");
+    ur::ui::notice("CPU applied — restart Task Manager.");
 }
 
 void OnCpuRestore() {
@@ -207,62 +198,109 @@ void OnCpuRestore() {
         return;
     }
     RefreshCpus();
-    ur::ui::notice("CPU name restored.");
+    ur::ui::notice("CPU restored.");
 }
 
-void DrawPresetGroups(
+void DrawBackground() {
+    const float width = static_cast<float>(ur::app::width());
+    const float height = static_cast<float>(ur::app::height());
+    ur::effects::draw_atmosphere(width, height);
+    ur::effects::draw_particles(width, height, Context->DeltaTime);
+}
+
+void DrawPageTabs() {
+    const bool gpuActive = g_page == Page::Gpu;
+    const bool cpuActive = g_page == Page::Cpu;
+
+    if (ur::ui::button(gpuActive ? "GPU  •" : "GPU", 0.0f)) {
+        g_page = Page::Gpu;
+    }
+    Layout->SameLine();
+    if (ur::ui::button(cpuActive ? "CPU  •" : "CPU", 0.0f)) {
+        g_page = Page::Cpu;
+    }
+}
+
+void DrawScrollPresetPicker(
     const auto& groups,
-    std::vector<bool>& groupOpen,
-    std::string& customName,
+    std::vector<std::string>& flatNames,
+    std::vector<const char*>& flatPtrs,
+    char* search,
+    int searchCapacity,
     int& presetSelected,
-    std::vector<std::string>& flatNames) {
-    if (groupOpen.size() != groups.size()) {
-        groupOpen.assign(groups.size(), false);
-        if (!groupOpen.empty()) {
-            groupOpen.front() = true;
+    std::string& customName,
+    const char* searchHint) {
+    ur::ui::field("Search", search, searchCapacity, searchHint);
+
+    Layout->Skip(6.0f);
+    ur::ui::section("Presets");
+
+    const bool filtering = search[0] != '\0';
+    if (filtering) {
+        if (Widgets->FilterList(
+                "##filter",
+                presetSelected,
+                flatPtrs.data(),
+                static_cast<int>(flatPtrs.size()),
+                search,
+                searchCapacity,
+                11)) {
+            if (presetSelected >= 0 && presetSelected < static_cast<int>(flatNames.size())) {
+                customName = flatNames[presetSelected];
+            }
         }
+        return;
     }
 
-    for (size_t i = 0; i < groups.size(); ++i) {
-        const std::string vendor = WideToUtf8(groups[i].vendor);
-        if (!Widgets->Collapsing(vendor.c_str(), groupOpen[i])) {
-            continue;
-        }
+    const float scrollHeight = 240.0f * Style->Scale;
+    if (!Layout->BeginChild("##preset-scroll", CVector(Layout->Width(), scrollHeight), true)) {
+        return;
+    }
+
+    for (const auto& group : groups) {
+        Widgets->Section(WideToUtf8(group.vendor).c_str());
 
         std::vector<std::string> localNames;
         std::vector<const char*> localPtrs;
-        localNames.reserve(groups[i].models.size());
-        localPtrs.reserve(groups[i].models.size());
-        for (const auto& model : groups[i].models) {
+        localNames.reserve(group.models.size());
+        localPtrs.reserve(group.models.size());
+        for (const auto& model : group.models) {
             localNames.emplace_back(WideToUtf8(model));
             localPtrs.push_back(localNames.back().c_str());
         }
 
         int localSelected = -1;
-        for (size_t j = 0; j < localNames.size(); ++j) {
-            if (localNames[j] == customName) {
-                localSelected = static_cast<int>(j);
+        for (size_t i = 0; i < localNames.size(); ++i) {
+            if (localNames[i] == customName) {
+                localSelected = static_cast<int>(i);
                 break;
             }
         }
 
         if (Widgets->List(
-                "##preset",
+                "##group-list",
                 localSelected,
                 localPtrs.data(),
                 static_cast<int>(localPtrs.size()),
-                5)) {
+                static_cast<int>(localPtrs.size()))) {
             if (localSelected >= 0 && localSelected < static_cast<int>(localNames.size())) {
                 customName = localNames[localSelected];
                 SyncPresetSelection(customName, flatNames, presetSelected);
             }
         }
+
         Layout->Skip(4.0f);
     }
+
+    Layout->EndChild();
 }
 
-void DrawDeviceStatus(const char* emptyMessage, const std::string& currentName, const char* originalLine, const char* detailLine) {
-    if (currentName.empty() && emptyMessage) {
+void DrawStatusBlock(
+    const char* emptyMessage,
+    const std::string& currentName,
+    const char* subLine,
+    const char* detailLine) {
+    if (currentName.empty()) {
         Widgets->Colored(Style->Warning, emptyMessage);
         ur::ui::faint("Run as Administrator.");
         return;
@@ -270,46 +308,54 @@ void DrawDeviceStatus(const char* emptyMessage, const std::string& currentName, 
 
     ur::ui::faint("Showing as");
     Widgets->Heading(currentName.c_str());
-    if (originalLine) {
-        ur::ui::faint(originalLine);
+    if (subLine) {
+        ur::ui::faint(subLine);
     }
     if (detailLine) {
         ur::ui::faint(detailLine);
     }
 }
 
-void DrawActionRow(bool enabled, auto&& onApply, auto&& onRestore, auto&& onRefresh) {
+void DrawActionRow(bool enabled, auto&& onApply, auto&& onRestore) {
     ur::ui::disabled_scope guard(!enabled);
-    if (ur::ui::button("Apply", 100.0f)) {
+    if (ur::ui::button("Apply", 110.0f)) {
         onApply();
     }
     Layout->SameLine();
-    if (ur::ui::button("Restore", 100.0f)) {
+    if (ur::ui::button("Restore", 110.0f)) {
         onRestore();
     }
     Layout->SameLine();
-    if (ur::ui::button("Refresh", 90.0f)) {
-        onRefresh();
+    if (ur::ui::button("Refresh", 100.0f)) {
+        if (g_page == Page::Gpu) {
+            RefreshGpus();
+        } else {
+            RefreshCpus();
+        }
     }
 }
 
 void DrawGpuPage() {
-    ur::ui::faint("Rename your GPU in Task Manager and Device Manager.");
-
-    Layout->Skip(8.0f);
-
     if (g_gpus.size() > 1) {
-        if (Widgets->Choice("Adapter", g_selectedGpu, g_gpuLabelPtrs.data(), static_cast<int>(g_gpuLabelPtrs.size()))) {
-            SelectGpu(g_selectedGpu);
+        ur::ui::section("Adapter");
+        if (Widgets->List(
+                "##gpu-adapters",
+                g_selectedGpu,
+                g_gpuAdapterPtrs.data(),
+                static_cast<int>(g_gpuAdapterPtrs.size()),
+                3)) {
+            g_gpuCustomName = WideToUtf8(g_gpus[g_selectedGpu].currentName);
+            SyncPresetSelection(g_gpuCustomName, g_gpuPresetNames, g_gpuPresetSelected);
         }
-        Layout->Skip(6.0f);
+        Layout->Skip(8.0f);
     }
 
     std::string originalLine;
     if (!g_gpus.empty() && g_gpus[g_selectedGpu].hasCustomName) {
         originalLine = "Original: " + WideToUtf8(g_gpus[g_selectedGpu].originalName);
     }
-    DrawDeviceStatus(
+
+    DrawStatusBlock(
         "No GPU detected",
         g_gpus.empty() ? std::string{} : WideToUtf8(g_gpus[g_selectedGpu].currentName),
         originalLine.empty() ? nullptr : originalLine.c_str(),
@@ -319,44 +365,29 @@ void DrawGpuPage() {
         Layout->Skip(6.0f);
         Widgets->Colored(Style->Warning, "Old virtual adapter detected");
         Layout->SameLine();
-        if (ur::ui::button("Remove", 80.0f)) {
+        if (ur::ui::button("Remove", 90.0f)) {
             OnGpuCleanupLeftover();
         }
     }
 
     Layout->Skip(10.0f);
-
-    if (*g_gpuSearch != '\0') {
-        if (Widgets->FilterList(
-                "Search presets",
-                g_gpuPresetSelected,
-                g_gpuPresetPtrs.data(),
-                static_cast<int>(g_gpuPresetPtrs.size()),
-                g_gpuSearch,
-                static_cast<int>(sizeof(g_gpuSearch)),
-                7)) {
-            if (g_gpuPresetSelected >= 0 && g_gpuPresetSelected < static_cast<int>(g_gpuPresetNames.size())) {
-                g_gpuCustomName = g_gpuPresetNames[g_gpuPresetSelected];
-            }
-        }
-    } else {
-        DrawPresetGroups(GetGpuPresets(), g_gpuGroupOpen, g_gpuCustomName, g_gpuPresetSelected, g_gpuPresetNames);
-    }
+    DrawScrollPresetPicker(
+        GetGpuPresets(),
+        g_gpuPresetNames,
+        g_gpuPresetPtrs,
+        g_gpuSearch,
+        static_cast<int>(sizeof(g_gpuSearch)),
+        g_gpuPresetSelected,
+        g_gpuCustomName,
+        "4090, Arc B580, 9090...");
 
     Layout->Skip(8.0f);
-    ur::ui::field("Search presets", g_gpuSearch, static_cast<int>(sizeof(g_gpuSearch)), "4090, 7900, Arc...");
-    Layout->Skip(4.0f);
     ur::ui::field("Custom name", g_gpuCustomName, "NVIDIA GeForce RTX 4090");
-
     Layout->Skip(8.0f);
-    DrawActionRow(!g_gpus.empty(), OnGpuApply, OnGpuRestore, RefreshGpus);
+    DrawActionRow(!g_gpus.empty(), OnGpuApply, OnGpuRestore);
 }
 
 void DrawCpuPage() {
-    ur::ui::faint("Rename your CPU in Task Manager. All logical cores update together.");
-
-    Layout->Skip(8.0f);
-
     std::string originalLine;
     std::string detailLine;
     if (!g_cpus.empty()) {
@@ -367,60 +398,51 @@ void DrawCpuPage() {
         detailLine = std::to_string(cpu.logicalCores) + " logical cores";
     }
 
-    DrawDeviceStatus(
+    DrawStatusBlock(
         "No CPU detected",
         g_cpus.empty() ? std::string{} : WideToUtf8(g_cpus[g_selectedCpu].currentName),
         originalLine.empty() ? nullptr : originalLine.c_str(),
         detailLine.empty() ? nullptr : detailLine.c_str());
 
     Layout->Skip(10.0f);
-
-    if (*g_cpuSearch != '\0') {
-        if (Widgets->FilterList(
-                "Search presets",
-                g_cpuPresetSelected,
-                g_cpuPresetPtrs.data(),
-                static_cast<int>(g_cpuPresetPtrs.size()),
-                g_cpuSearch,
-                static_cast<int>(sizeof(g_cpuSearch)),
-                7)) {
-            if (g_cpuPresetSelected >= 0 && g_cpuPresetSelected < static_cast<int>(g_cpuPresetNames.size())) {
-                g_cpuCustomName = g_cpuPresetNames[g_cpuPresetSelected];
-            }
-        }
-    } else {
-        DrawPresetGroups(GetCpuPresets(), g_cpuGroupOpen, g_cpuCustomName, g_cpuPresetSelected, g_cpuPresetNames);
-    }
+    DrawScrollPresetPicker(
+        GetCpuPresets(),
+        g_cpuPresetNames,
+        g_cpuPresetPtrs,
+        g_cpuSearch,
+        static_cast<int>(sizeof(g_cpuSearch)),
+        g_cpuPresetSelected,
+        g_cpuCustomName,
+        "9950X, Ultra 7, Potato...");
 
     Layout->Skip(8.0f);
-    ur::ui::field("Search presets", g_cpuSearch, static_cast<int>(sizeof(g_cpuSearch)), "9950X, Ultra 7, Potato...");
-    Layout->Skip(4.0f);
     ur::ui::field("Custom name", g_cpuCustomName, "Intel(R) Core(TM) Ultra 7 265K");
-
     Layout->Skip(8.0f);
-    DrawActionRow(!g_cpus.empty(), OnCpuApply, OnCpuRestore, RefreshCpus);
+    DrawActionRow(!g_cpus.empty(), OnCpuApply, OnCpuRestore);
 }
 
 void DrawUi() {
+    DrawBackground();
+
     const float width = static_cast<float>(ur::app::width());
     const float height = static_cast<float>(ur::app::height());
+    const float panelWidth = width - kPanelPad * 2.0f;
+    const float panelHeight = height - kPanelPad * 2.0f;
 
-    if (ur::ui::window panel("##host", &g_open, FramePin | FrameClose, CVector(0.0f, 0.0f), CVector(width, height)); panel) {
+    if (Frames->Begin(
+            "##panel",
+            &g_open,
+            FramePin | FrameClose | FrameFit,
+            CVector(kPanelPad, kPanelPad),
+            CVector(panelWidth, panelHeight))) {
         Widgets->Heading("CPU-GPU-Larp");
-        ur::ui::faint("Spoof GPU and CPU names shown in Task Manager.");
+        ur::ui::faint("Spoof names in Task Manager · restart Task Manager after apply");
 
-        Layout->Skip(8.0f);
+        Layout->Skip(10.0f);
+        DrawPageTabs();
 
-        if (Widgets->BeginTabs("##pages")) {
-            if (Widgets->Tab("GPU")) {
-                g_page = Page::Gpu;
-            }
-            if (Widgets->Tab("CPU")) {
-                g_page = Page::Cpu;
-            }
-            Widgets->EndTabs();
-        }
-
+        Layout->Skip(12.0f);
+        ur::ui::separator();
         Layout->Skip(10.0f);
 
         if (g_page == Page::Gpu) {
@@ -429,9 +451,11 @@ void DrawUi() {
             DrawCpuPage();
         }
 
-        Layout->Skip(10.0f);
+        Layout->Skip(8.0f);
         ur::ui::faint("github.com/ff0l/CPU-GPU-Larp");
     }
+
+    Frames->End();
 
     if (!g_open) {
         ur::app::quit();
@@ -466,8 +490,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
     ur::app::Config config;
     config.title = "CPU-GPU-Larp";
-    config.width = 560;
-    config.height = 640;
+    config.width = 520;
+    config.height = 700;
     config.backend = ur::Backend::Auto;
     config.vsync = true;
     config.docking = false;
@@ -475,22 +499,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     config.media = false;
     config.hear = false;
     config.discord = false;
-    config.overlay = false;
+    config.overlay = true;
 
     return ur::app::run(config, [] {
         if (!g_initialized) {
             ur::theme::apply(7);
-            Style->Glass = false;
+            Style->Glass = true;
+            Style->Shadows = true;
+            Style->Borders = true;
+            ur::effects::set_quality(ur::effects::Quality::Low);
+            ur::effects::set_background(1);
             BuildFlatPresets(GetGpuPresets(), g_gpuPresetNames, g_gpuPresetPtrs);
             BuildFlatPresets(GetCpuPresets(), g_cpuPresetNames, g_cpuPresetPtrs);
-            g_gpuGroupOpen.assign(GetGpuPresets().size(), false);
-            g_cpuGroupOpen.assign(GetCpuPresets().size(), false);
-            if (!g_gpuGroupOpen.empty()) {
-                g_gpuGroupOpen.front() = true;
-            }
-            if (!g_cpuGroupOpen.empty()) {
-                g_cpuGroupOpen.front() = true;
-            }
             RefreshGpus();
             RefreshCpus();
             g_initialized = true;

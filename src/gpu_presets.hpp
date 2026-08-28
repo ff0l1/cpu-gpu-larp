@@ -18,7 +18,15 @@ inline const std::vector<GpuPresetGroup>& GetGpuPresets() {
         { L"AMD RX 9000", { L"AMD Radeon RX 9070 XT", L"AMD Radeon RX 9070", L"AMD Radeon RX 9060 XT" } },
         { L"AMD RX 7000", { L"AMD Radeon RX 7900 XTX", L"AMD Radeon RX 7900 XT", L"AMD Radeon RX 7800 XT", L"AMD Radeon RX 7700 XT", L"AMD Radeon RX 7600" } },
         { L"AMD RX 6000", { L"AMD Radeon RX 6950 XT", L"AMD Radeon RX 6900 XT", L"AMD Radeon RX 6800 XT", L"AMD Radeon RX 6700 XT", L"AMD Radeon RX 6600 XT" } },
-        { L"Intel Arc", { L"Intel(R) Arc(TM) B580 Graphics", L"Intel(R) Arc(TM) A770 Graphics", L"Intel(R) Arc(TM) A750 Graphics", L"Intel(R) Arc(TM) A580 Graphics", L"Intel(R) Arc(TM) A380 Graphics" } },
+        { L"Intel Arc B-Series", { L"Intel(R) Arc(TM) B580 Graphics", L"Intel(R) Arc(TM) B570 Graphics", L"Intel(R) Arc(TM) B550 Graphics" } },
+        { L"Intel Arc A-Series", { L"Intel(R) Arc(TM) A770 Graphics", L"Intel(R) Arc(TM) A750 Graphics", L"Intel(R) Arc(TM) A580 Graphics", L"Intel(R) Arc(TM) A380 Graphics" } },
+        { L"Fun", {
+            L"NVIDIA GeForce RTX 9090 Ti SUPER",
+            L"AMD Radeon RX 9990 XTX 32GB",
+            L"Intel(R) Arc(TM) B9990 Graphics",
+            L"NVIDIA GeForce GT 710",
+            L"Microsoft Remote Display Adapter",
+        } },
     };
     return presets;
 }
