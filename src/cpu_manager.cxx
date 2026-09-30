@@ -1,4 +1,4 @@
-#include "cpu_manager.hpp"
+#include "cpu_manager.hxx"
 
 #define INITGUID
 #include <windows.h>

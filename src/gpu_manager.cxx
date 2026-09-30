@@ -1,4 +1,4 @@
-#include "gpu_manager.hpp"
+#include "gpu_manager.hxx"
 
 #define INITGUID
 #include <windows.h>

@@ -1,31 +1,18 @@
-# CPU-GPU-Larp
+# Task Manager names
 
-Change the **GPU** and **CPU** names shown in Windows Task Manager.
+Changes the CPU and GPU names Windows Task Manager shows. Pick a preset, search the list, or type your own. The app asks for Administrator when it needs the registry. Restart Task Manager after Apply.
 
-Pick a preset, search the list, or type your own name. The app relaunches as Administrator when needed. Restart Task Manager after applying.
+## Use
 
-<p align="center">
-  <img src="https://img.shields.io/badge/platform-Windows-0078d4?style=flat-square" alt="Windows">
-  <img src="https://img.shields.io/badge/C%2B%2B-20-00599c?style=flat-square" alt="C++20">
-</p>
+GPU tab: pick the adapter if you have more than one, then Apply. Restore puts the driver name back.
 
-## Features
+CPU tab: one name is written to every logical core. Restore puts the old string back.
 
-- **GPU** and **CPU** in one app
-- Borderless overlay UI with preset search
-- NVIDIA, AMD, Intel Arc, and fun presets
-- **Apply** / **Restore** / **Refresh**
-- Multi-GPU adapter picker
-
-## Requirements
-
-- Windows 10 or 11
-- Administrator rights (registry changes)
-- [CMake](https://cmake.org/) 3.20+
-- Visual Studio 2022+ with C++ desktop development
-- [ur UI framework](https://github.com/ff0l/ui-framework) — place it next to this repo as `ui Framework`, or set `UR_FRAMEWORK_DIR`
+Virtual adapters (Basic Display, Remote Desktop, and similar) are skipped.
 
 ## Build
+
+Windows 10 or 11, CMake 3.20+, Visual Studio 2022 with the C++ desktop workload. The UI comes from [ur](https://github.com/ff0l1/ur). Put that checkout next to this repo as `ui Framework`, or set `UR_FRAMEWORK_DIR`.
 
 ```bat
 build.bat
@@ -33,80 +20,19 @@ build.bat
 
 Output: `build\Release\CPU-GPU-Larp.exe`
 
-Run the executable as Administrator.
+## How the names stick
 
-## Usage
+Task Manager reads the GPU **FriendlyName** under `HKLM\SYSTEM\CurrentControlSet\Enum\<instance>`. The app writes that value and pokes PnP so you do not need a reboot.
 
-### GPU
+The CPU name is **ProcessorNameString** under `HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\{n}`, plus **FriendlyName** on the ACPI enum nodes so the two stay in sync.
 
-1. Open the **GPU** tab.
-2. If multiple adapters are listed, pick the one you want.
-3. Search or scroll presets, or edit **Custom name**.
-4. Click **Apply**.
-5. Restart Task Manager.
-
-**Restore** removes the custom name and returns the driver default.
-
-### CPU
-
-1. Open the **CPU** tab.
-2. Pick a preset or set a custom name.
-3. Click **Apply** — all logical cores are updated together.
-4. Restart Task Manager.
-
-**Restore** removes the spoof and puts the original name back.
-
-## How it works
-
-### GPU
-
-Task Manager reads the display adapter **FriendlyName** under:
-
-`HKLM\SYSTEM\CurrentControlSet\Enum\<instance-id>`
-
-The app writes that value and triggers a PnP property change so the new name shows up without a reboot. Virtual adapters (Basic Display, Remote Desktop, etc.) are ignored.
-
-| File | Purpose |
-|------|---------|
-| `src/gpu_manager.cpp` | GPU enumeration, registry writes, device refresh |
-| `src/gpu_presets.hpp` | Preset names |
-
-### CPU
-
-Task Manager reads **ProcessorNameString** under:
-
-`HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\{n}`
-
-The app also writes **FriendlyName** on each logical core under `Enum\ACPI\...` so everything stays in sync.
-
-| File | Purpose |
-|------|---------|
-| `src/cpu_manager.cpp` | CPU enumeration, registry writes, refresh |
-| `src/cpu_presets.hpp` | Preset names |
-
-### UI
-
-| File | Purpose |
-|------|---------|
-| `src/main.cpp` | Overlay window, tabs, preset lists |
-| `src/app.manifest` | Administrator elevation |
-
-## Project layout
+## Files
 
 ```
-CPU-GPU-Larp/
-├── src/
-│   ├── main.cpp
-│   ├── gpu_manager.cpp / .hpp
-│   ├── cpu_manager.cpp / .hpp
-│   ├── gpu_presets.hpp
-│   ├── cpu_presets.hpp
-│   └── app.manifest
-├── CMakeLists.txt
-├── build.bat
-└── README.md
+src/main.cxx            window, tabs, lists
+src/gpu_manager.cxx     adapters and registry
+src/cpu_manager.cxx     cores and registry
+src/gpu_presets.hxx
+src/cpu_presets.hxx
+src/app.manifest        elevation
 ```
-
-## Author
-
-[ff0l](https://github.com/ff0l)

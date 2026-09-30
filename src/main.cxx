@@ -4,11 +4,11 @@
 #include <shellapi.h>
 #include <dwmapi.h>
 
-#include "ur/ur.hpp"
-#include "gpu_manager.hpp"
-#include "cpu_manager.hpp"
-#include "gpu_presets.hpp"
-#include "cpu_presets.hpp"
+#include "ur/ur.hxx"
+#include "gpu_manager.hxx"
+#include "cpu_manager.hxx"
+#include "gpu_presets.hxx"
+#include "cpu_presets.hxx"
 
 #include <algorithm>
 #include <cstring>

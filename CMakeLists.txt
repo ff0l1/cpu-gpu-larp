@@ -6,19 +6,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(DEFINED ENV{UR_FRAMEWORK_DIR} AND EXISTS "$ENV{UR_FRAMEWORK_DIR}/CMakeLists.txt")
     set(UR_FRAMEWORK_DIR "$ENV{UR_FRAMEWORK_DIR}")
+elseif(EXISTS "${CMAKE_SOURCE_DIR}/../custom-framework/CMakeLists.txt")
+    set(UR_FRAMEWORK_DIR "${CMAKE_SOURCE_DIR}/../custom-framework")
 elseif(EXISTS "${CMAKE_SOURCE_DIR}/../ui Framework/CMakeLists.txt")
     set(UR_FRAMEWORK_DIR "${CMAKE_SOURCE_DIR}/../ui Framework")
 else()
-    message(FATAL_ERROR "Set UR_FRAMEWORK_DIR or place \"ui Framework\" next to this folder.")
+    message(FATAL_ERROR "Set UR_FRAMEWORK_DIR or place custom-framework next to this folder.")
 endif()
 
 set(UR_BUILD_DEMO OFF CACHE BOOL "" FORCE)
 add_subdirectory("${UR_FRAMEWORK_DIR}" ur_framework EXCLUDE_FROM_ALL)
 
 add_executable(cpu-gpu-larp WIN32
-    src/main.cpp
-    src/gpu_manager.cpp
-    src/cpu_manager.cpp
+    src/main.cxx
+    src/gpu_manager.cxx
+    src/cpu_manager.cxx
     src/app.rc
 )
 
