@@ -1,4 +1,4 @@
-# Task Manager names
+# CPU/GPU Larp
 
 Changes the CPU and GPU names Windows Task Manager shows. Pick a preset, search the list, or type your own. The app asks for Administrator when it needs the registry. Restart Task Manager after Apply.
 
@@ -12,7 +12,7 @@ Virtual adapters (Basic Display, Remote Desktop, and similar) are skipped.
 
 ## Build
 
-Windows 10 or 11, CMake 3.20+, Visual Studio 2022 with the C++ desktop workload. The UI comes from [ur](https://github.com/ff0l1/ur). Put that checkout next to this repo as `ui Framework`, or set `UR_FRAMEWORK_DIR`.
+Windows 10 or 11, CMake 3.20+, Visual Studio 2022 with the C++ desktop workload. The UI comes from [ui-framework](https://github.com/ff0l1/ui-framework). Put that checkout next to this repo as `custom-framework`, or set `UR_FRAMEWORK_DIR`.
 
 ```bat
 build.bat
